@@ -1,5 +1,5 @@
 Package: badzupagui
-Type: Package
+Type: badzupagui (Beta Version)
 Title: What the Package Does (Title Case)
 Version: 0.1.0
 Author: Who wrote it
@@ -9,3 +9,4 @@ Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
+Imports: shinyjs (>= 1.1)
