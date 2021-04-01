@@ -1,6 +1,6 @@
 #' badzupagui
 #' @export
-badzupagui <- function(){
+badzupagui <- function() {
   shiny::shinyApp(
     ui = fluidPage(
       titlePanel("BAD-ZUPA"),
@@ -16,9 +16,11 @@ badzupagui <- function(){
           fileInput(
             'file1',
             NULL,
-            accept = c('text/csv',
-                       'text/comma-separated-values,text/plain',
-                       '.csv')
+            accept = c(
+              'text/csv',
+              'text/comma-separated-values,text/plain',
+              '.csv'
+            )
           ),
 
           tags$head(tags$style(
@@ -85,23 +87,25 @@ badzupagui <- function(){
                    "Height of plot (inch):",
                    textInput("height", NULL, 4))
           ),
-          fluidRow(column(
-            6,
-            "Saved format:",
-            radioButtons(
-              inputId = "var3",
-              label = NULL,
-              choices = list("pdf", "png")
-            )
-          ),
-          column(6,
-                 uiOutput("ui_botm"))),
+         # fluidRow(
+          #  column(
+           #   6,
+              "Saved format:",
+              radioButtons(
+                inputId = "var3",
+                label = NULL,
+                choices = list("pdf", "png")
+              )
+          #  ),
+         #   column(6,
+        #           )
+         # ),
 
 
-          h3(textOutput("message_data2")),
-          hr(style = "border-top: 1px solid #000000;"),
-          tableOutput('contents'),
-          textOutput("message_data1")
+      #    h3(textOutput("message_data2")),
+      #    hr(style = "border-top: 1px solid #000000;"),
+      #    tableOutput('contents'),
+      #    textOutput("message_data1")
             ),
 
 
@@ -115,12 +119,16 @@ badzupagui <- function(){
               "Computation",
               plotOutput('plot'),
               #downloadButton(outputId = "down", label = "Save the plot"),
-              br(),
-              br(),
-              br(),
+        #      br(),
+        #      br(),
+        #      br(),
               code("Run Log"),
               shinyjs::useShinyjs(),
-              pre(id = "console")
+              pre(id = "console"),
+              uiOutput("ui_botm"),
+              uiOutput("ui_diagnosis"),
+              plotOutput("result_diagnosis"),
+              uiOutput("download_diag_plot")
             ),
             tabPanel("How to use BAD-ZUPA?", ""),
             tabPanel("Config for Professional", "")
@@ -178,6 +186,8 @@ badzupagui <- function(){
           qq <- badzupa::bdquantile(bd)
           message("Done!")
           return(list(
+            bd = bd,
+            qq = qq,
             x = bd$x,
             y = bd$y,
             qx = qq$x,
@@ -193,10 +203,11 @@ badzupagui <- function(){
         )
       })
 
+
       badplot <- function() {
-        if (is.null(input$file1)) {
-          NULL
-        } else {
+        #if (is.null(input$file1)) {
+        #  NULL
+        #} else {
           data <- badzupa()
           xlim <- NULL
           #print(input$xlim_min)
@@ -246,7 +257,7 @@ badzupagui <- function(){
           abline(h = 0)
           if (input$rug == 1)
             rug(data[, 1])
-        }
+     #   }
       }
 
       badplot_init <- function() {
@@ -294,7 +305,6 @@ badzupagui <- function(){
         )
       }
 
-
       output$plot <- renderPlot({
         badplot_init()
       })
@@ -308,43 +318,121 @@ badzupagui <- function(){
         })
       })
 
-
-
       observeEvent(input$action_plot, {
-        output$downloadData <- downloadHandler(
-          filename =  function() {
-            paste("result", input$var3, sep = ".")
-          },
-          # content is a function with argument file. content writes the plot to the device
-          content = function(file) {
-            if (input$var3 == "pdf")
-              pdf(file,
-                  width = as.numeric(input$width),
-                  height = as.numeric(input$height))# open the pdf device
-            else
-              png(
-                file,
-                width = as.numeric(input$width),
-                height = as.numeric(input$height),
-                units = "in",
-                res = 1200,
-                pointsize = 4
-              ) # open the png device
-
-            badplot()# draw the plot
-
-            dev.off()  # turn the device off
-          }
-        )
-
-        output$ui_botm <- renderUI({
+        output$ui_diagnosis <- renderUI({
           if (!is.null(input$file1)) {
-            tagList(downloadButton("downloadData", "Download Plot"))
+            tagList(actionButton('action_diagnosis', 'diagnosis'),
+                    downloadButton("download_table", "Download CSV"),
+                    downloadButton("downloadData", "Download Plot"))
           }
         })
       })
+
+      output$downloadData <- downloadHandler(
+        filename =  function() {
+          paste("result", input$var3, sep = ".")
+        },
+        # content is a function with argument file. content writes the plot to the device
+        content = function(file) {
+          if (input$var3 == "pdf")
+            pdf(file,
+                width = as.numeric(input$width),
+                height = as.numeric(input$height))# open the pdf device
+          else
+            png(
+              file,
+              width = as.numeric(input$width),
+              height = as.numeric(input$height),
+              units = "in",
+              res = 1200,
+              pointsize = 4
+            ) # open the png device
+
+          badplot()# draw the plot
+          dev.off()  # turn the device off
+        }
+      )
+
+      output$download_table <- downloadHandler(
+        filename =  function() {
+          paste("result.csv")
+        },
+        # content is a function with argument file. content writes the plot to the device
+        content = function(file) {
+          a <- preplot()
+          #print(ans)
+          write.csv(data.frame(x = a$x, y = a$y),file)  # turn the device off
+        }
+      )
+
+      plot_diag <- function(){
+        ans <- preplot()
+        badzupa::diagnosis(ans$bd,ans$qq)
+      }
+
+      observeEvent(input$action_diagnosis, {
+        output$result_diagnosis <-renderPlot({
+          plot_diag()
+        })
+      }
+      )
+
+      observeEvent(input$action_diagnosis, {
+        output$download_diag_plot <- renderUI({
+          if (!is.null(input$file1)) {
+            tagList(
+              downloadButton("download_diag", "Download Plot"),
+              downloadButton("download_diag_table", "Download CSV")
+              )
+          }
+        })}
+      )
+
+      output$download_diag <- downloadHandler(
+        filename =  function() {
+          paste("result_diag", input$var3, sep = ".")
+        },
+        # content is a function with argument file. content writes the plot to the device
+        content = function(file) {
+          if (input$var3 == "pdf")
+            pdf(file,
+                width = as.numeric(input$width),
+                height = as.numeric(input$height))# open the pdf device
+          else
+            png(
+              file,
+              width = as.numeric(input$width),
+              height = as.numeric(input$height),
+              units = "in",
+              res = 1200,
+              pointsize = 4
+            ) # open the png device
+
+          plot_diag()# draw the plot
+
+          dev.off()  # turn the device off
+        }
+      )
+
+      output$download_diag_table <- downloadHandler(
+        filename =  function() {
+          paste("result_diag.csv")
+        },
+        # content is a function with argument file. content writes the plot to the device
+        content = function(file) {
+          a <- preplot()
+          ans <- fit_peaks(a$bd, a$qq)
+          #print(ans)
+          write.csv(as.data.frame(ans),file)  # turn the device off
+        }
+      )
+
+
+
     }
         )
 
 }
 
+library(shiny)
+badzupagui()
