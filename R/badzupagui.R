@@ -433,6 +433,3 @@ badzupagui <- function() {
         )
 
 }
-
-library(shiny)
-badzupagui()
